@@ -1,0 +1,2978 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MedGrid converts PDF lecture notes into sharp N-up study sheets directly in your browser.">
+  <meta name="theme-color" content="#FFF3EA">
+  <title>MedGrid PDF N-up Converter</title>
+  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%23FFE36D" stroke="%23211F1F" stroke-width="4"/><path d="M14 18h36M14 32h36M14 46h36M22 12v40M42 12v40" stroke="%23211F1F" stroke-width="4" stroke-linecap="round"/></svg>'>
+  <style>
+    :root {
+      --accent: #3B82F6;
+      --accent-dark: #2563eb;
+      --accent-soft: #dbeafe;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #dbe3ef;
+      --panel: #f8fbff;
+      --ok: #0f9f6e;
+      --warn: #b45309;
+      --bad: #dc2626;
+      --radius: 8px;
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: #ffffff;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    button,
+    select,
+    input {
+      font: inherit;
+    }
+
+    .shell {
+      width: min(1040px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 40px 0 48px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 640px;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .privacy-note {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 340px;
+      margin-top: 4px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: #315172;
+      background: var(--panel);
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+
+    .privacy-dot {
+      flex: 0 0 10px;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--ok);
+      box-shadow: 0 0 0 4px rgba(15, 159, 110, 0.12);
+    }
+
+    .app-layout {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .folder-sidebar {
+      position: sticky;
+      top: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .sidebar-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .sidebar-head h2,
+    .folder-title h2 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0;
+    }
+
+    .icon-btn {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius);
+      color: #1d4ed8;
+      background: #fff;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .icon-btn:hover {
+      background: #eff6ff;
+    }
+
+    .folder-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .folder-tab {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      width: 100%;
+      min-height: 42px;
+      padding: 8px 10px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      color: #334155;
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .folder-tab strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .folder-count {
+      min-width: 26px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      color: var(--muted);
+      background: #e8eef8;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .folder-tab.is-active {
+      border-color: #bfdbfe;
+      color: #1d4ed8;
+      background: #eff6ff;
+    }
+
+    .folder-tab.is-active .folder-count {
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .folder-help {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    .main-column {
+      min-width: 0;
+    }
+
+    #folderPanel,
+    #presets,
+    #previewPanel,
+    #queueSection {
+      scroll-margin-top: 90px;
+    }
+
+    .folder-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .folder-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(220px, 300px) minmax(240px, 1fr) minmax(280px, 1fr);
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .preset-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .preset {
+      min-height: 68px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: #334155;
+      background: #fff;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+
+    .preset strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--ink);
+      font-size: 0.9rem;
+    }
+
+    .preset span {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .preset.is-active {
+      border-color: #93c5fd;
+      background: #eff6ff;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    }
+
+    .preset:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 8px;
+      color: #334155;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    select {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 40px 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .quality-note {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius);
+      color: #1e40af;
+      background: #eff6ff;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    #qualityText {
+      min-width: 0;
+      line-height: 1.35;
+    }
+
+    .quality-badge {
+      display: grid;
+      place-items: center;
+      flex: 0 0 24px;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .advanced {
+      margin-bottom: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .advanced summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 48px;
+      padding: 0 14px;
+      color: #334155;
+      font-weight: 800;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .advanced summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .advanced summary::after {
+      content: "+";
+      color: var(--accent);
+      font-size: 1.2rem;
+    }
+
+    .advanced[open] summary::after {
+      content: "-";
+    }
+
+    .advanced-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      padding: 0 14px 14px;
+    }
+
+    .global-progress {
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .progress-topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      color: #334155;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .bar {
+      width: 100%;
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e8eef8;
+    }
+
+    .bar span {
+      display: block;
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent);
+      transition: width 160ms ease;
+    }
+
+    .drop-zone {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 260px;
+      padding: 32px;
+      border: 2px dashed #b8c8dd;
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      text-align: center;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .drop-zone.is-dragging {
+      border-color: var(--accent);
+      background: #eff6ff;
+      transform: translateY(-1px);
+    }
+
+    .drop-inner {
+      max-width: 560px;
+    }
+
+    .upload-icon {
+      display: grid;
+      place-items: center;
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      border-radius: 16px;
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .drop-zone h2 {
+      margin: 0 0 8px;
+      font-size: 1.35rem;
+      letter-spacing: 0;
+    }
+
+    .drop-zone p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .preview-panel {
+      min-height: 260px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .preview-head h2 {
+      margin: 0 0 4px;
+      font-size: 1rem;
+    }
+
+    .preview-head p,
+    .recommendation {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .preview-canvas-wrap {
+      display: grid;
+      place-items: center;
+      min-height: 300px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    #previewCanvas {
+      width: 100%;
+      max-width: 420px;
+      height: auto;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .preview-empty {
+      color: var(--muted);
+      font-size: 0.92rem;
+      text-align: center;
+    }
+
+    .recommendation {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .preview-fineprint {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+    }
+
+    .file-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      color: #fff;
+      background: var(--accent);
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 160ms ease, border-color 160ms ease, color 160ms ease, opacity 160ms ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--accent-dark);
+    }
+
+    .btn.secondary {
+      color: #2563eb;
+      border-color: #bfdbfe;
+      background: #fff;
+    }
+
+    .btn.secondary:hover:not(:disabled) {
+      color: #1d4ed8;
+      border-color: #93c5fd;
+      background: #eff6ff;
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.58;
+    }
+
+    .queue-section {
+      margin-top: 22px;
+    }
+
+    .queue-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .queue-heading h2 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0;
+    }
+
+    .queue {
+      display: grid;
+      gap: 10px;
+    }
+
+    .empty-state {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: var(--muted);
+      background: #fff;
+      text-align: center;
+    }
+
+    .file-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+    }
+
+    .file-main {
+      min-width: 0;
+    }
+
+    .file-name {
+      overflow: hidden;
+      color: #172033;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .file-progress {
+      margin-top: 10px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+
+    .status.queued {
+      color: #475569;
+      background: #f1f5f9;
+    }
+
+    .status.processing {
+      color: #1d4ed8;
+      background: #dbeafe;
+    }
+
+    .status.done {
+      color: #047857;
+      background: #d1fae5;
+    }
+
+    .status.error {
+      color: #b91c1c;
+      background: #fee2e2;
+    }
+
+    .remove {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: #64748b;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .remove:hover:not(:disabled) {
+      color: var(--bad);
+      border-color: #fecaca;
+      background: #fff5f5;
+    }
+
+    .remove:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    .error-text {
+      width: 100%;
+      color: var(--bad);
+    }
+
+    .note-wrap {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .note-label {
+      color: #334155;
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .note-input {
+      width: 100%;
+      min-height: 58px;
+      resize: vertical;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: var(--ink);
+      background: #fbfdff;
+      line-height: 1.4;
+    }
+
+    .note-input:focus {
+      outline: 2px solid rgba(59, 130, 246, 0.24);
+      border-color: #93c5fd;
+      background: #fff;
+    }
+
+    .history-chip {
+      color: #315172;
+      font-weight: 700;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .toast {
+      min-height: 24px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    /* Playful editorial skin inspired by pastel neo-brutalist product sites. */
+    :root {
+      --accent: #7ddbd0;
+      --accent-dark: #211f1f;
+      --accent-soft: #d9fbf5;
+      --ink: #211f1f;
+      --muted: #635d59;
+      --line: #211f1f;
+      --panel: #fffaf4;
+      --ok: #3abf8f;
+      --warn: #f2b84b;
+      --bad: #ef6262;
+      --paper: #fff3ea;
+      --yellow: #ffe36d;
+      --coral: #ff9b7a;
+      --lavender: #eadcff;
+      --sky: #c8ecff;
+      --mint: #c9f4ee;
+      --shadow: 5px 5px 0 #211f1f;
+      --soft-shadow: 3px 3px 0 #211f1f;
+      --radius: 18px;
+      font-family: "Arial Rounded MT Bold", "Trebuchet MS", ui-rounded, system-ui, sans-serif;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 10% 12%, rgba(255, 227, 109, 0.42) 0 90px, transparent 92px),
+        radial-gradient(circle at 90% 10%, rgba(234, 220, 255, 0.62) 0 110px, transparent 112px),
+        radial-gradient(circle at 85% 72%, rgba(201, 244, 238, 0.75) 0 150px, transparent 152px),
+        linear-gradient(180deg, var(--paper), #fffaf4 48%, #f6f0ff);
+      background-attachment: fixed;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      z-index: -1;
+      pointer-events: none;
+      opacity: 0.75;
+    }
+
+    body::before {
+      width: 86px;
+      height: 86px;
+      left: 4vw;
+      top: 18vh;
+      border: 3px solid var(--ink);
+      border-radius: 55% 45% 52% 48%;
+      background: var(--yellow);
+      transform: rotate(-18deg);
+      box-shadow: var(--soft-shadow);
+    }
+
+    body::after {
+      width: 118px;
+      height: 54px;
+      right: 4vw;
+      top: 26vh;
+      border: 3px solid var(--ink);
+      border-radius: 999px;
+      background: var(--coral);
+      transform: rotate(12deg);
+      box-shadow: var(--soft-shadow);
+    }
+
+    .shell {
+      width: min(1180px, calc(100% - 28px));
+      padding: 14px 0 54px;
+    }
+
+    .top-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 46px;
+      margin-bottom: 20px;
+      padding: 6px 8px;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.82);
+      box-shadow: var(--soft-shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    .brand-chip,
+    .nav-bubble,
+    .lang-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      text-decoration: none;
+      font-weight: 900;
+    }
+
+    .brand-mark {
+      display: inline-grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      background: var(--yellow);
+      font-size: 0.72rem;
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
+
+    .nav-links a,
+    .nav-bubble,
+    .lang-toggle {
+      padding: 7px 14px;
+      border: 2px solid transparent;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .nav-links a:nth-child(1) {
+      background: var(--mint);
+      border-color: var(--ink);
+    }
+
+    .nav-links a {
+      color: var(--ink);
+      text-decoration: none;
+      transition: transform 140ms ease, background 140ms ease;
+    }
+
+    .nav-links a:hover {
+      background: var(--yellow);
+      border-color: var(--ink);
+      transform: translateY(-1px) rotate(-1deg);
+    }
+
+    .nav-bubble,
+    .lang-toggle {
+      border-color: var(--ink);
+      background: var(--lavender);
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    .lang-toggle {
+      cursor: pointer;
+      font-family: inherit;
+      background: var(--yellow);
+    }
+
+    header {
+      position: relative;
+      align-items: center;
+      margin-bottom: 22px;
+      padding: 28px;
+      border: 3px solid var(--ink);
+      border-radius: 28px;
+      background:
+        radial-gradient(circle at 78% 28%, var(--yellow) 0 42px, transparent 44px),
+        radial-gradient(circle at 88% 72%, var(--mint) 0 66px, transparent 68px),
+        linear-gradient(135deg, #fff8f3 0%, #ffe9f0 100%);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    header::before {
+      content: "sharp notes!";
+      position: absolute;
+      right: 24px;
+      top: 18px;
+      padding: 8px 13px;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      background: var(--yellow);
+      font-size: 0.78rem;
+      font-weight: 900;
+      transform: rotate(8deg);
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    header::after {
+      content: "*";
+      position: absolute;
+      right: 185px;
+      bottom: 16px;
+      color: var(--ink);
+      font-size: 4rem;
+      line-height: 1;
+      transform: rotate(-18deg);
+    }
+
+    h1 {
+      max-width: 720px;
+      font-size: clamp(3.1rem, 8vw, 7.3rem);
+      line-height: 0.82;
+      letter-spacing: -0.02em;
+      text-transform: lowercase;
+      text-shadow: 3px 3px 0 #fff, 5px 5px 0 var(--ink);
+    }
+
+    .subtitle {
+      max-width: 620px;
+      color: var(--ink);
+      font-size: 1.12rem;
+      font-weight: 800;
+      line-height: 1.42;
+    }
+
+    .privacy-note,
+    .folder-sidebar,
+    .folder-title,
+    .preset,
+    .quality-note,
+    .advanced,
+    .global-progress,
+    .drop-zone,
+    .preview-panel,
+    .file-row,
+    .empty-state {
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      box-shadow: var(--soft-shadow);
+    }
+
+    .privacy-note {
+      position: relative;
+      z-index: 1;
+      max-width: 330px;
+      color: var(--ink);
+      background: #fff;
+      font-weight: 800;
+      transform: rotate(1.4deg);
+    }
+
+    .privacy-dot {
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(125, 219, 208, 0.28);
+    }
+
+    .app-layout {
+      grid-template-columns: 250px minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    .folder-sidebar {
+      top: 14px;
+      background: var(--lavender);
+      transform: rotate(-0.6deg);
+    }
+
+    .sidebar-head h2,
+    .folder-title h2,
+    .queue-heading h2,
+    .preview-head h2,
+    .drop-zone h2 {
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+    }
+
+    .icon-btn,
+    .btn,
+    .remove {
+      border: 2px solid var(--ink);
+      border-radius: 14px;
+      color: var(--ink);
+      background: var(--yellow);
+      box-shadow: 3px 3px 0 var(--ink);
+      font-weight: 900;
+      transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+    }
+
+    .icon-btn:hover,
+    .btn:hover:not(:disabled),
+    .remove:hover:not(:disabled),
+    .preset:hover {
+      transform: translate(-2px, -2px) rotate(-0.4deg);
+      box-shadow: 6px 6px 0 var(--ink);
+    }
+
+    .btn {
+      min-height: 48px;
+      padding: 0 20px;
+      background: var(--coral);
+      color: var(--ink);
+    }
+
+    .btn.secondary {
+      color: var(--ink);
+      border-color: var(--ink);
+      background: #fff;
+    }
+
+    .btn.secondary:hover:not(:disabled) {
+      color: var(--ink);
+      border-color: var(--ink);
+      background: var(--mint);
+    }
+
+    .folder-tab {
+      min-height: 46px;
+      border: 2px solid var(--ink);
+      border-radius: 15px;
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 2px 2px 0 var(--ink);
+      font-weight: 900;
+      transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+    }
+
+    .folder-tab:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 var(--ink);
+    }
+
+    .folder-tab.is-active {
+      border-color: var(--ink);
+      color: var(--ink);
+      background: var(--yellow);
+      transform: rotate(-1deg);
+    }
+
+    .folder-count,
+    .folder-tab.is-active .folder-count {
+      color: var(--ink);
+      background: var(--mint);
+      border: 2px solid var(--ink);
+      font-weight: 900;
+    }
+
+    .folder-help {
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .folder-title {
+      background: #fff;
+    }
+
+    .folder-title p,
+    .file-meta,
+    .preview-head p,
+    .preview-fineprint,
+    .recommendation,
+    .toast {
+      color: var(--muted);
+      font-family: "Trebuchet MS", ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .preset-strip {
+      gap: 12px;
+    }
+
+    .preset {
+      min-height: 86px;
+      color: var(--ink);
+      background: #fff;
+      transform: rotate(-0.4deg);
+    }
+
+    .preset:nth-child(2) {
+      background: var(--mint);
+      transform: rotate(0.6deg);
+    }
+
+    .preset:nth-child(3) {
+      background: var(--yellow);
+      transform: rotate(-0.7deg);
+    }
+
+    .preset:nth-child(4) {
+      background: var(--lavender);
+      transform: rotate(0.8deg);
+    }
+
+    .preset strong {
+      color: var(--ink);
+      font-size: 1rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .preset span {
+      color: var(--ink);
+      font-family: "Trebuchet MS", ui-sans-serif, system-ui, sans-serif;
+      font-weight: 700;
+    }
+
+    .preset.is-active {
+      border-color: var(--ink);
+      background: var(--coral);
+      box-shadow: 7px 7px 0 var(--ink);
+    }
+
+    .field label,
+    .progress-topline,
+    .note-label {
+      color: var(--ink);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.01em;
+    }
+
+    select,
+    .note-input {
+      border: 2px solid var(--ink);
+      border-radius: 14px;
+      color: var(--ink);
+      background: #fff;
+      font-weight: 800;
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    select:focus,
+    .note-input:focus {
+      outline: 3px solid rgba(255, 227, 109, 0.72);
+      border-color: var(--ink);
+      background: #fff;
+    }
+
+    .quality-note {
+      color: var(--ink);
+      background: var(--mint);
+      font-weight: 900;
+    }
+
+    .quality-badge {
+      color: var(--ink);
+      border: 2px solid var(--ink);
+      background: var(--yellow);
+      font-size: 0.64rem;
+      font-weight: 900;
+    }
+
+    .advanced,
+    .global-progress {
+      background: #fff;
+    }
+
+    .advanced summary {
+      color: var(--ink);
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .advanced summary::after {
+      color: var(--ink);
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--ink);
+      border-radius: 999px;
+      background: var(--yellow);
+      line-height: 1;
+    }
+
+    .bar {
+      height: 12px;
+      border: 2px solid var(--ink);
+      background: #fff;
+    }
+
+    .bar span {
+      background: repeating-linear-gradient(45deg, var(--accent), var(--accent) 8px, var(--yellow) 8px, var(--yellow) 16px);
+    }
+
+    .workspace-grid {
+      gap: 20px;
+    }
+
+    .drop-zone {
+      min-height: 292px;
+      border-style: dashed;
+      border-width: 3px;
+      background:
+        radial-gradient(circle at 18% 26%, var(--yellow) 0 34px, transparent 35px),
+        radial-gradient(circle at 85% 76%, var(--sky) 0 48px, transparent 49px),
+        #fff;
+    }
+
+    .drop-zone.is-dragging {
+      border-color: var(--ink);
+      background: var(--mint);
+      transform: translate(-3px, -3px) rotate(-0.4deg);
+      box-shadow: 8px 8px 0 var(--ink);
+    }
+
+    .upload-icon {
+      width: 76px;
+      height: 76px;
+      border: 2px solid var(--ink);
+      border-radius: 24px;
+      color: var(--ink);
+      background: var(--lavender);
+      box-shadow: var(--soft-shadow);
+      transform: rotate(4deg);
+    }
+
+    .drop-zone h2 {
+      font-size: 1.7rem;
+    }
+
+    .drop-zone p {
+      color: var(--ink);
+      font-family: "Trebuchet MS", ui-sans-serif, system-ui, sans-serif;
+      font-weight: 700;
+    }
+
+    .preview-panel {
+      background: var(--sky);
+      transform: rotate(0.45deg);
+    }
+
+    .preview-canvas-wrap {
+      border: 2px solid var(--ink);
+      background:
+        linear-gradient(90deg, rgba(33, 31, 31, 0.05) 1px, transparent 1px),
+        linear-gradient(rgba(33, 31, 31, 0.05) 1px, transparent 1px),
+        #fff;
+      background-size: 18px 18px;
+      box-shadow: inset 3px 3px 0 rgba(33, 31, 31, 0.08);
+    }
+
+    #previewCanvas {
+      border: 2px solid var(--ink);
+      box-shadow: var(--soft-shadow);
+    }
+
+    .recommendation {
+      border: 2px solid var(--ink);
+      color: var(--ink);
+      background: #fff;
+      font-weight: 800;
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    .queue-section {
+      margin-top: 28px;
+    }
+
+    .queue-heading h2 {
+      font-size: 1.25rem;
+    }
+
+    .file-row {
+      background: #fff;
+    }
+
+    .file-row:nth-child(odd) {
+      background: #fffdf0;
+    }
+
+    .file-name {
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 900;
+    }
+
+    .status,
+    .history-chip {
+      border: 2px solid var(--ink);
+      color: var(--ink);
+      background: #fff;
+      font-weight: 900;
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    .status.queued {
+      color: var(--ink);
+      background: var(--lavender);
+    }
+
+    .status.processing {
+      color: var(--ink);
+      background: var(--yellow);
+    }
+
+    .status.done {
+      color: var(--ink);
+      background: var(--mint);
+    }
+
+    .status.error {
+      color: var(--ink);
+      background: #ffb4a6;
+    }
+
+    .remove {
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .remove:hover:not(:disabled) {
+      color: var(--ink);
+      border-color: var(--ink);
+      background: #ffb4a6;
+    }
+
+    .error-text {
+      color: #b42318;
+      font-weight: 900;
+    }
+
+    .empty-state {
+      color: var(--ink);
+      background: var(--lavender);
+      font-weight: 900;
+    }
+
+    @keyframes floaty {
+      0%, 100% {
+        transform: translateY(0) rotate(-0.4deg);
+      }
+      50% {
+        transform: translateY(-4px) rotate(0.5deg);
+      }
+    }
+
+    .preset.is-active,
+    .upload-icon,
+    header::before {
+      animation: floaty 4s ease-in-out infinite;
+    }
+
+    @media (max-width: 760px) {
+      .shell {
+        width: min(100% - 24px, 1040px);
+        padding-top: 24px;
+      }
+
+      .top-nav {
+        border-radius: 18px;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      header,
+      .app-layout,
+      .controls {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+
+      header {
+        padding: 22px;
+      }
+
+      header::before,
+      header::after {
+        display: none;
+      }
+
+      h1 {
+        font-size: clamp(3rem, 18vw, 5.2rem);
+      }
+
+      .folder-sidebar {
+        position: static;
+      }
+
+      .preset-strip,
+      .advanced-grid,
+      .workspace-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .privacy-note {
+        max-width: none;
+      }
+
+      .drop-zone {
+        min-height: 220px;
+        padding: 24px 16px;
+      }
+
+      .queue-heading,
+      .actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .file-row {
+        grid-template-columns: 1fr auto;
+      }
+
+      .file-row .status {
+        grid-column: 1 / 2;
+        width: max-content;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <nav class="top-nav" aria-label="MedGrid sections">
+      <a class="brand-chip" href="#dropZone" aria-label="MedGrid home">
+        <span class="brand-mark">MG</span>
+        <strong>MedGrid</strong>
+      </a>
+      <div class="nav-links">
+        <a id="navFolders" href="#folderPanel">Klasörler</a>
+        <a id="navPresets" href="#presets">Presetler</a>
+        <a id="navPreview" href="#previewPanel">Önizleme</a>
+        <a id="navConvert" href="#queueSection">Dönüştür</a>
+      </div>
+      <a id="navStart" class="nav-bubble" href="#queueSection">Başla</a>
+      <button id="languageToggle" class="lang-toggle" type="button">EN</button>
+    </nav>
+
+    <header>
+      <div>
+        <h1>MedGrid</h1>
+        <p id="subtitle" class="subtitle">Ders PDF'lerini hızlı tekrar, çıktı alma ve notlandırma için kompakt N-up çalışma sayfalarına dönüştür.</p>
+      </div>
+      <div class="privacy-note">
+        <span class="privacy-dot" aria-hidden="true"></span>
+        <span id="privacyText">Tüm işlem tarayıcında lokal yapılır. Dosyaların cihazından ayrılmaz.</span>
+      </div>
+    </header>
+
+    <div class="app-layout">
+      <aside id="folderPanel" class="folder-sidebar" aria-label="Folders">
+        <div class="sidebar-head">
+          <h2 id="foldersTitle">Klasörler</h2>
+          <button id="newFolderButton" class="icon-btn" type="button" aria-label="Klasör oluştur">+</button>
+        </div>
+        <div id="folderList" class="folder-list"></div>
+        <p id="folderHelp" class="folder-help">Kurul_5 gibi klasörler oluştur, sonra PDF'leri o klasör seçiliyken yükle.</p>
+      </aside>
+
+      <div class="main-column">
+        <section class="folder-title" aria-live="polite">
+          <div>
+            <h2 id="activeFolderName">Gelenler</h2>
+            <p id="activeFolderMeta">Henüz PDF yok.</p>
+          </div>
+          <button id="renameFolderButton" class="btn secondary" type="button">Yeniden adlandır</button>
+        </section>
+
+    <section id="presets" class="preset-strip" aria-label="Study presets">
+      <button class="preset is-active" type="button" data-preset="dense">
+        <strong id="presetDenseTitle">Yoğun Tekrar</strong>
+        <span id="presetDenseDesc">Ders slaytlarını hızlı taramak için 4x4</span>
+      </button>
+      <button class="preset" type="button" data-preset="readable">
+        <strong id="presetReadableTitle">Okunur Notlar</strong>
+        <span id="presetReadableDesc">Dengeli çalışma sayfaları için 3x3</span>
+      </button>
+      <button class="preset" type="button" data-preset="print">
+        <strong id="presetPrintTitle">Çıktı Handout</strong>
+        <span id="presetPrintDesc">Slayt tarzı sayfalar için 2x3</span>
+      </button>
+      <button class="preset" type="button" data-preset="annotation">
+        <strong id="presetAnnotationTitle">Not Alanı</strong>
+        <span id="presetAnnotationDesc">Daha ferah not almak için 2x2</span>
+      </button>
+    </section>
+
+    <section class="controls" aria-label="Conversion controls">
+      <div class="field">
+        <label id="layoutLabel" for="layoutSelect">Grid düzeni</label>
+        <select id="layoutSelect">
+          <option value="2x2">2x2 - yaprak başına 4 sayfa</option>
+          <option value="2x3">2x3 - yaprak başına 6 sayfa</option>
+          <option value="3x3">3x3 - yaprak başına 9 sayfa</option>
+          <option value="3x4">3x4 - yaprak başına 12 sayfa</option>
+          <option value="4x4" selected>4x4 - yaprak başına 16 sayfa</option>
+        </select>
+      </div>
+      <div class="quality-note">
+        <span class="quality-badge" aria-hidden="true">OK</span>
+        <span id="qualityText">Sıkı orijinal PDF kalitesi: sayfalar görüntüye çevrilmeden gömülür.</span>
+      </div>
+      <div class="global-progress" aria-live="polite">
+        <div class="progress-topline">
+          <span id="globalLabel">Ready</span>
+          <span id="globalPercent">0%</span>
+        </div>
+        <div class="bar" aria-hidden="true"><span id="globalBar"></span></div>
+      </div>
+    </section>
+
+    <details class="advanced">
+      <summary id="advancedSummary">Gelişmiş çıktı ayarları</summary>
+      <div class="advanced-grid">
+        <div class="field">
+          <label id="marginLabel" for="marginSelect">Kenar boşluğu</label>
+          <select id="marginSelect">
+            <option value="compact" selected>Küçük</option>
+            <option value="balanced">Orta</option>
+            <option value="roomy">Büyük</option>
+          </select>
+        </div>
+        <div class="field">
+          <label id="gapLabel" for="gapSelect">Hücre aralığı</label>
+          <select id="gapSelect">
+            <option value="tight">Sıkı</option>
+            <option value="normal" selected>Normal</option>
+            <option value="airy">Ferah</option>
+          </select>
+        </div>
+        <div class="field">
+          <label id="pageSizeLabel" for="pageSizeSelect">Sayfa boyutu</label>
+          <select id="pageSizeSelect">
+            <option value="a4" selected>A4</option>
+            <option value="letter">Letter</option>
+          </select>
+        </div>
+        <div class="field">
+          <label id="orientationLabel" for="orientationSelect">Yön</label>
+          <select id="orientationSelect">
+            <option value="auto" selected>Auto</option>
+            <option value="portrait">Dikey</option>
+            <option value="landscape">Yatay</option>
+          </select>
+        </div>
+        <div class="field">
+          <label id="pageOrderLabel" for="pageOrderSelect">Sayfa sırası</label>
+          <select id="pageOrderSelect">
+            <option value="row" selected>Soldan sağa</option>
+            <option value="column">Yukarıdan aşağı</option>
+          </select>
+        </div>
+      </div>
+    </details>
+
+    <section class="workspace-grid">
+      <section id="dropZone" class="drop-zone">
+        <input id="fileInput" class="file-input" type="file" accept="application/pdf,.pdf" multiple>
+        <div class="drop-inner">
+          <div class="upload-icon" aria-hidden="true">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+              <path d="M12 16V4m0 0 4 4m-4-4L8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2 id="dropTitle">PDF dosyalarını buraya bırak</h2>
+          <p id="dropDesc">Bir veya daha fazla PDF yükle. MedGrid dosyaları tek tek işler ve sonucu orijinal dosya adıyla indirir.</p>
+          <button id="chooseButton" class="btn secondary" type="button">PDF seç</button>
+        </div>
+      </section>
+
+      <aside id="previewPanel" class="preview-panel" aria-label="Live preview">
+        <div class="preview-head">
+          <div>
+            <h2 id="previewTitle">Canlı önizleme</h2>
+            <p id="previewStatus">İlk yaprağı önizlemek için PDF ekle.</p>
+          </div>
+        </div>
+        <div id="previewCanvasWrap" class="preview-canvas-wrap">
+          <div class="preview-empty">N-up yaprak önizlemen burada görünecek.</div>
+          <canvas id="previewCanvas" hidden></canvas>
+        </div>
+        <p id="previewFineprint" class="preview-fineprint">Önizleme sadece ekran içindir. İndirilen PDF'ler orijinal gömülü sayfa kalitesini korur.</p>
+        <p id="recommendation" class="recommendation">Yoğun Tekrar hızlı tarama için iyidir. Slaytlarda küçük etiketler varsa Okunur Notlar'a geç.</p>
+      </aside>
+    </section>
+
+    <section id="queueSection" class="queue-section" aria-label="File queue">
+      <div class="queue-heading">
+        <h2 id="queueTitle">Dosya kuyruğu</h2>
+        <button id="convertButton" class="btn" type="button" disabled>Hepsini dönüştür</button>
+      </div>
+      <div id="queue" class="queue">
+        <div class="empty-state">Henüz PDF kuyruğa eklenmedi.</div>
+      </div>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script type="module">
+    import { PDFDocument } from "https://cdn.skypack.dev/pdf-lib";
+
+    const A4_PORTRAIT = { width: 595.28, height: 841.89 };
+    const A4_LANDSCAPE = { width: 841.89, height: 595.28 };
+    const BATCH_SIZE = 10;
+
+    const layouts = {
+      "2x2": { rows: 2, cols: 2, orientation: "portrait" },
+      "2x3": { rows: 2, cols: 3, orientation: "landscape" },
+      "3x3": { rows: 3, cols: 3, orientation: "portrait" },
+      "3x4": { rows: 3, cols: 4, orientation: "landscape" },
+      "4x4": { rows: 4, cols: 4, orientation: "landscape" }
+    };
+
+    const pageSizes = {
+      a4: {
+        portrait: A4_PORTRAIT,
+        landscape: A4_LANDSCAPE
+      },
+      letter: {
+        portrait: { width: 612, height: 792 },
+        landscape: { width: 792, height: 612 }
+      }
+    };
+
+    const marginOptions = {
+      compact: 8,
+      balanced: 14,
+      roomy: 26
+    };
+
+    const gapOptions = {
+      tight: 2,
+      normal: 4,
+      airy: 8
+    };
+
+    const presets = {
+      dense: { layout: "4x4", margin: "compact", gap: "tight", pageSize: "a4", orientation: "auto", pageOrder: "row" },
+      readable: { layout: "3x3", margin: "compact", gap: "normal", pageSize: "a4", orientation: "auto", pageOrder: "row" },
+      print: { layout: "2x3", margin: "balanced", gap: "normal", pageSize: "a4", orientation: "auto", pageOrder: "row" },
+      annotation: { layout: "2x2", margin: "roomy", gap: "airy", pageSize: "a4", orientation: "auto", pageOrder: "row" }
+    };
+
+    const STORAGE_KEY = "medgrid-workspace-v1";
+    const LANGUAGE_KEY = "medgrid-language-v1";
+    const DEFAULT_FOLDER_ID = "inbox";
+    let currentLanguage = getSavedLanguage();
+
+    const i18n = {
+      tr: {
+        documentTitle: "MedGrid PDF N-up Dönüştürücü",
+        metaDescription: "MedGrid ders PDF'lerini doğrudan tarayıcıda keskin N-up çalışma sayfalarına dönüştürür.",
+        navFolders: "Klasörler",
+        navPresets: "Presetler",
+        navPreview: "Önizleme",
+        navConvert: "Dönüştür",
+        navStart: "Başla",
+        languageToggle: "EN",
+        languageToggleLabel: "İngilizceye geç",
+        subtitle: "Ders PDF'lerini hızlı tekrar, çıktı alma ve notlandırma için kompakt N-up çalışma sayfalarına dönüştür.",
+        privacyText: "Tüm işlem tarayıcında lokal yapılır. Dosyaların cihazından ayrılmaz.",
+        foldersTitle: "Klasörler",
+        folderHelp: "Kurul_5 gibi klasörler oluştur, sonra PDF'leri o klasör seçiliyken yükle.",
+        inbox: "Gelenler",
+        noPdfsYet: "Henüz PDF yok.",
+        rename: "Yeniden adlandır",
+        presetDenseTitle: "Yoğun Tekrar",
+        presetDenseDesc: "Ders slaytlarını hızlı taramak için 4x4",
+        presetReadableTitle: "Okunur Notlar",
+        presetReadableDesc: "Dengeli çalışma sayfaları için 3x3",
+        presetPrintTitle: "Çıktı Handout",
+        presetPrintDesc: "Slayt tarzı sayfalar için 2x3",
+        presetAnnotationTitle: "Not Alanı",
+        presetAnnotationDesc: "Daha ferah not almak için 2x2",
+        layoutLabel: "Grid düzeni",
+        layout2x2: "2x2 - yaprak başına 4 sayfa",
+        layout2x3: "2x3 - yaprak başına 6 sayfa",
+        layout3x3: "3x3 - yaprak başına 9 sayfa",
+        layout3x4: "3x4 - yaprak başına 12 sayfa",
+        layout4x4: "4x4 - yaprak başına 16 sayfa",
+        qualityText: "Sıkı orijinal PDF kalitesi: sayfalar görüntüye çevrilmeden gömülür.",
+        ready: "Hazır",
+        advancedSummary: "Gelişmiş çıktı ayarları",
+        marginLabel: "Kenar boşluğu",
+        small: "Küçük",
+        medium: "Orta",
+        large: "Büyük",
+        gapLabel: "Hücre aralığı",
+        tight: "Sıkı",
+        normal: "Normal",
+        spacious: "Ferah",
+        pageSizeLabel: "Sayfa boyutu",
+        orientationLabel: "Yön",
+        auto: "Otomatik",
+        portrait: "Dikey",
+        landscape: "Yatay",
+        pageOrderLabel: "Sayfa sırası",
+        rowOrder: "Soldan sağa",
+        columnOrder: "Yukarıdan aşağı",
+        dropTitle: "PDF dosyalarını buraya bırak",
+        dropDesc: "Bir veya daha fazla PDF yükle. MedGrid dosyaları tek tek işler ve sonucu orijinal dosya adıyla indirir.",
+        choosePdfs: "PDF seç",
+        previewTitle: "Canlı önizleme",
+        previewAdd: "İlk yaprağı önizlemek için PDF ekle.",
+        previewEmpty: "N-up yaprak önizlemen burada görünecek.",
+        previewFineprint: "Önizleme sadece ekran içindir. İndirilen PDF'ler orijinal gömülü sayfa kalitesini korur.",
+        queueTitle: "Dosya kuyruğu",
+        convertAll: "Hepsini dönüştür",
+        emptyQueue: "Henüz PDF kuyruğa eklenmedi.",
+        emptyFolder: "Bu klasörde henüz PDF yok.",
+        createFolderLabel: "Klasör oluştur",
+        folderPrompt: "Klasör adı",
+        renamePrompt: "Klasörü yeniden adlandır",
+        note: "Not",
+        notePlaceholder: "Çalışma notu, sınav hatırlatması veya çıktı ipucu ekle...",
+        added: "Eklendi",
+        converted: "Dönüştürüldü",
+        historyOnly: "Sadece geçmiş",
+        savedHistoryItem: "Kaydedilmiş geçmiş kaydı",
+        waitingToConvert: "Dönüştürmeyi bekliyor",
+        nonPdfSkipped: "{count} PDF olmayan dosya atlandı.",
+        pdfAdded: "{count} PDF dosyası eklendi.",
+        storageFull: "Çalışma alanı notları kaydedilemedi. Tarayıcı depolaması dolu olabilir.",
+        previewUnavailable: "Önizleme kullanılamıyor.",
+        previewNoPdfJs: "PDF.js yüklenmediği için PDF önizleme kullanılamıyor.",
+        renderingPreview: "Önizleme hazırlanıyor...",
+        previewing: "{name} önizleniyor",
+        previewFailed: "Bu PDF için önizleme oluşturulamadı.",
+        firstSheetPreview: "İlk yaprak önizlemesi: {shown} / {total} sayfa.",
+        conversionStarted: "Dönüştürme başladı. Her dosya bitince otomatik indirilecek.",
+        allProcessed: "Kuyruktaki tüm dosyalar işlendi.",
+        loadingPdf: "PDF yükleniyor...",
+        embeddingPage: "Orijinal sayfa gömülüyor {page} / {total}; görüntüye çevrilmiyor...",
+        finalizingPdf: "PDF sonlandırılıyor...",
+        doneDownloaded: "Tamamlandı. {name} olarak indirildi.",
+        couldNotConvert: "Bu PDF dönüştürülemedi.",
+        statusQueued: "Sırada",
+        statusProcessing: "İşleniyor",
+        statusDone: "Bitti",
+        statusError: "Hata",
+        complete: "tamamlandı",
+        processingXofY: "İşleniyor {current} / {total}",
+        folderMeta: "{count} PDF · {done} dönüştürüldü{last}",
+        lastUpdated: " · Son güncelleme {date}",
+        pagesCount: "{count} sayfa",
+        pageCountLoads: "Sayfa sayısı dönüştürmede yüklenir",
+        removeFile: "{name} dosyasını kaldır",
+        recommendationEmpty: "Yoğun Tekrar hızlı tarama için iyidir. Slaytlarda küçük etiketler varsa Okunur Notlar'a geç.",
+        recommendation4x4: "4x4 çok kompakt. Hızlı tekrar veya çok sayfa basmak için iyi; anatomi etiketleri küçük kalırsa 3x3'e geç.",
+        recommendation3x3: "3x3 çoğu ders slaytı için en dengeli seçim: kompakt ama diagram ve etiketler hâlâ okunur.",
+        recommendation2x3: "2x3 slayt desteleri ve handout için iyi çalışır; tablette okunabilirlik daha rahat olur.",
+        recommendation2x2: "2x2 en çok not alanını bırakır; yoğun histoloji, anatomi veya patoloji sayfaları için güvenlidir.",
+        recommendationSheets: " {pages} kaynak sayfa yaklaşık {sheets} çıktı yaprağı olur.",
+        recommendationColumn: " Yukarıdan aşağı sıra, kolonları mini not destesi gibi okumak istediğinde işe yarar.",
+        settingsSummary: "{layout} · {size} {orientation} · {order}",
+        orderRow: "soldan sağa",
+        orderColumn: "yukarıdan aşağı",
+        errPassword: "Bu PDF parola korumalı görünüyor. Parolayı kaldırıp tekrar dene.",
+        errEncrypted: "Bu PDF şifreli veya kısıtlı. Bulanık fallback oluşturulmadı; orijinal zoom kalitesi için PDF'i kilitsiz hale getirip tekrar dene.",
+        errMemory: "Tarayıcı belleği azaldı. 2x2 gibi daha küçük bir grid dene veya daha az dosyayı aynı anda işle.",
+        errInvalid: "Bu PDF orijinal kaliteyle gömülemedi. Bozuk, şifreli veya tarayıcı PDF motoruyla uyumsuz olabilir.",
+        errGeneric: "Orijinal kaliteyle gömme başarısız: {message}. Dosya görüntüye çevrilmedi, bu yüzden bulanık fallback oluşturulmadı."
+      },
+      en: {
+        documentTitle: "MedGrid PDF N-up Converter",
+        metaDescription: "MedGrid converts PDF lecture notes into sharp N-up study sheets directly in your browser.",
+        navFolders: "Folders",
+        navPresets: "Presets",
+        navPreview: "Preview",
+        navConvert: "Convert",
+        navStart: "Start",
+        languageToggle: "TR",
+        languageToggleLabel: "Switch to Turkish",
+        subtitle: "Convert lecture PDFs into compact N-up study sheets for faster review, printing, and annotation.",
+        privacyText: "All processing is done locally in your browser. Your files never leave your device.",
+        foldersTitle: "Folders",
+        folderHelp: "Create folders like Kurul_5, then upload PDFs while that folder is selected.",
+        inbox: "Inbox",
+        noPdfsYet: "No PDFs yet.",
+        rename: "Rename",
+        presetDenseTitle: "Dense Review",
+        presetDenseDesc: "4x4 for fast lecture scanning",
+        presetReadableTitle: "Readable Notes",
+        presetReadableDesc: "3x3 for balanced study sheets",
+        presetPrintTitle: "Print Handout",
+        presetPrintDesc: "2x3 for slide-style pages",
+        presetAnnotationTitle: "Annotation Space",
+        presetAnnotationDesc: "2x2 with more breathing room",
+        layoutLabel: "Grid layout",
+        layout2x2: "2x2 - 4 pages per sheet",
+        layout2x3: "2x3 - 6 pages per sheet",
+        layout3x3: "3x3 - 9 pages per sheet",
+        layout3x4: "3x4 - 12 pages per sheet",
+        layout4x4: "4x4 - 16 pages per sheet",
+        qualityText: "Strict original-PDF quality: pages are embedded without rasterizing.",
+        ready: "Ready",
+        advancedSummary: "Advanced output settings",
+        marginLabel: "Margin",
+        small: "Small",
+        medium: "Medium",
+        large: "Large",
+        gapLabel: "Cell gap",
+        tight: "Tight",
+        normal: "Normal",
+        spacious: "Spacious",
+        pageSizeLabel: "Page size",
+        orientationLabel: "Orientation",
+        auto: "Auto",
+        portrait: "Portrait",
+        landscape: "Landscape",
+        pageOrderLabel: "Page order",
+        rowOrder: "Left to right",
+        columnOrder: "Top to bottom",
+        dropTitle: "Drop PDF files here",
+        dropDesc: "Upload one or more PDFs. MedGrid processes them one at a time and downloads each result with the original filename.",
+        choosePdfs: "Choose PDFs",
+        previewTitle: "Live preview",
+        previewAdd: "Add a PDF to preview the first sheet.",
+        previewEmpty: "Your N-up sheet preview will appear here.",
+        previewFineprint: "Preview is screen-only. Downloaded PDFs keep the original embedded page quality.",
+        queueTitle: "File queue",
+        convertAll: "Convert All",
+        emptyQueue: "No PDF files queued yet.",
+        emptyFolder: "No PDF files in this folder yet.",
+        createFolderLabel: "Create folder",
+        folderPrompt: "Folder name",
+        renamePrompt: "Rename folder",
+        note: "Note",
+        notePlaceholder: "Add study notes, exam reminders, or print tips...",
+        added: "Added",
+        converted: "Converted",
+        historyOnly: "History only",
+        savedHistoryItem: "Saved history item",
+        waitingToConvert: "Waiting to convert",
+        nonPdfSkipped: "{count} non-PDF file{plural} skipped.",
+        pdfAdded: "{count} PDF file{plural} added.",
+        storageFull: "Workspace notes could not be saved. Browser storage may be full.",
+        previewUnavailable: "Preview unavailable.",
+        previewNoPdfJs: "PDF preview is unavailable because PDF.js did not load.",
+        renderingPreview: "Rendering preview...",
+        previewing: "Previewing {name}",
+        previewFailed: "Preview could not be rendered for this PDF.",
+        firstSheetPreview: "First sheet preview: {shown} of {total} page{plural}.",
+        conversionStarted: "Conversion started. Downloads will begin automatically as each file finishes.",
+        allProcessed: "All queued files have been processed.",
+        loadingPdf: "Loading PDF...",
+        embeddingPage: "Embedding original page {page} / {total} without rasterizing...",
+        finalizingPdf: "Finalizing PDF...",
+        doneDownloaded: "Done. Downloaded as {name}.",
+        couldNotConvert: "Could not convert this PDF.",
+        statusQueued: "Queued",
+        statusProcessing: "Processing",
+        statusDone: "Done",
+        statusError: "Error",
+        complete: "complete",
+        processingXofY: "Processing {current} / {total}",
+        folderMeta: "{count} PDF{plural} · {done} converted{last}",
+        lastUpdated: " · Last updated {date}",
+        pagesCount: "{count} page{plural}",
+        pageCountLoads: "Page count loads on convert",
+        removeFile: "Remove {name}",
+        recommendationEmpty: "Dense Review is great for quick scanning. Switch to Readable Notes if lecture slides have small labels.",
+        recommendation4x4: "4x4 is very compact. Use it for quick review or printing many pages; switch to 3x3 if anatomy labels feel small.",
+        recommendation3x3: "3x3 is the best balance for most lecture slides: compact, but still readable for diagrams and labels.",
+        recommendation2x3: "2x3 works well for slide decks and handouts, especially when you want better readability on tablets.",
+        recommendation2x2: "2x2 leaves the most room for annotation and is safer for dense histology, anatomy, or pathology pages.",
+        recommendationSheets: " {pages} source pages will become about {sheets} output sheet{plural}.",
+        recommendationColumn: " Top-to-bottom ordering is useful when you want columns to read like mini note stacks.",
+        settingsSummary: "{layout} · {size} {orientation} · {order}",
+        orderRow: "left-to-right",
+        orderColumn: "top-to-bottom",
+        errPassword: "This PDF appears to be password-protected. Remove the password and try again.",
+        errEncrypted: "This PDF is encrypted or restricted. MedGrid did not create a blurry fallback; unlock the PDF and try again for original zoom quality.",
+        errMemory: "The browser ran low on memory. Try a smaller grid such as 2x2, or process fewer files at once.",
+        errInvalid: "This PDF could not be embedded at original quality. It may be corrupt, encrypted, or unsupported by the browser PDF engine.",
+        errGeneric: "Original-quality embedding failed: {message}. The file was not rasterized, so no blurry fallback was created."
+      }
+    };
+
+    const savedWorkspace = loadWorkspaceData();
+
+    const state = {
+      files: savedWorkspace.files,
+      folders: savedWorkspace.folders,
+      activeFolderId: savedWorkspace.activeFolderId,
+      isProcessing: false,
+      activeFileId: null,
+      previewVersion: 0,
+      previewTimer: null
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const dropZone = $("#dropZone");
+    const fileInput = $("#fileInput");
+    const chooseButton = $("#chooseButton");
+    const convertButton = $("#convertButton");
+    const layoutSelect = $("#layoutSelect");
+    const marginSelect = $("#marginSelect");
+    const gapSelect = $("#gapSelect");
+    const pageSizeSelect = $("#pageSizeSelect");
+    const orientationSelect = $("#orientationSelect");
+    const pageOrderSelect = $("#pageOrderSelect");
+    const presetButtons = Array.from(document.querySelectorAll(".preset"));
+    const queueEl = $("#queue");
+    const toast = $("#toast");
+    const globalLabel = $("#globalLabel");
+    const globalPercent = $("#globalPercent");
+    const globalBar = $("#globalBar");
+    const previewStatus = $("#previewStatus");
+    const previewCanvas = $("#previewCanvas");
+    const previewCanvasWrap = $("#previewCanvasWrap");
+    const recommendation = $("#recommendation");
+    const folderList = $("#folderList");
+    const newFolderButton = $("#newFolderButton");
+    const renameFolderButton = $("#renameFolderButton");
+    const activeFolderName = $("#activeFolderName");
+    const activeFolderMeta = $("#activeFolderMeta");
+    const languageToggle = $("#languageToggle");
+
+    if (!window.pdfjsLib) {
+      showToast(t("previewNoPdfJs"));
+    } else {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+
+    chooseButton.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", (event) => {
+      addFiles(event.target.files);
+      fileInput.value = "";
+    });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropZone.classList.add("is-dragging");
+      });
+    });
+
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropZone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        if (eventName === "dragleave" && dropZone.contains(event.relatedTarget)) return;
+        dropZone.classList.remove("is-dragging");
+      });
+    });
+
+    dropZone.addEventListener("drop", (event) => addFiles(event.dataTransfer.files));
+    convertButton.addEventListener("click", convertAll);
+    newFolderButton.addEventListener("click", createFolder);
+    renameFolderButton.addEventListener("click", renameActiveFolder);
+    languageToggle.addEventListener("click", toggleLanguage);
+    [layoutSelect, marginSelect, gapSelect, pageSizeSelect, orientationSelect, pageOrderSelect].forEach((control) => {
+      control.addEventListener("change", () => {
+        syncPresetState();
+        updateRecommendation();
+        schedulePreview();
+      });
+    });
+    presetButtons.forEach((button) => {
+      button.addEventListener("click", () => applyPreset(button.dataset.preset));
+    });
+
+    function addFiles(fileList) {
+      const accepted = Array.from(fileList).filter(isPdfFile);
+      const rejectedCount = fileList.length - accepted.length;
+
+      accepted.forEach((file) => {
+        state.files.push({
+          id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+          file,
+          name: file.name,
+          size: file.size,
+          folderId: state.activeFolderId,
+          createdAt: new Date().toISOString(),
+          convertedAt: "",
+          settingsLabel: "",
+          note: "",
+          pageCount: null,
+          status: "queued",
+          progress: 0,
+          message: t("waitingToConvert"),
+          error: ""
+        });
+      });
+
+      if (rejectedCount > 0) {
+        showToast(t("nonPdfSkipped", { count: rejectedCount, plural: plural(rejectedCount) }));
+      } else if (accepted.length > 0) {
+        showToast(t("pdfAdded", { count: accepted.length, plural: plural(accepted.length) }));
+      }
+
+      renderQueue();
+      renderFolders();
+      renderFolderTitle();
+      updateGlobalProgress();
+      updateRecommendation();
+      schedulePreview();
+    }
+
+    function isPdfFile(file) {
+      return file && (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"));
+    }
+
+    function getSavedLanguage() {
+      try {
+        return localStorage.getItem(LANGUAGE_KEY) === "en" ? "en" : "tr";
+      } catch (error) {
+        return "tr";
+      }
+    }
+
+    function t(key, params = {}) {
+      const value = (i18n[currentLanguage] && i18n[currentLanguage][key]) || i18n.en[key] || key;
+
+      return value.replace(/\{(\w+)\}/g, (_, param) => params[param] ?? "");
+    }
+
+    function plural(count) {
+      return currentLanguage === "en" && count !== 1 ? "s" : "";
+    }
+
+    function setText(id, key) {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = t(key);
+      }
+    }
+
+    function setOptionText(select, value, key) {
+      const option = select.querySelector(`option[value="${value}"]`);
+      if (option) {
+        option.textContent = t(key);
+      }
+    }
+
+    function toggleLanguage() {
+      currentLanguage = currentLanguage === "tr" ? "en" : "tr";
+      try {
+        localStorage.setItem(LANGUAGE_KEY, currentLanguage);
+      } catch (error) {
+        console.warn("Could not save language preference", error);
+      }
+
+      applyTranslations();
+      renderFolders();
+      renderFolderTitle();
+      renderQueue();
+      updateGlobalProgress();
+      updateRecommendation();
+      schedulePreview();
+    }
+
+    function applyTranslations() {
+      document.documentElement.lang = currentLanguage;
+      document.title = t("documentTitle");
+      const metaDescription = document.querySelector('meta[name="description"]');
+      if (metaDescription) {
+        metaDescription.content = t("metaDescription");
+      }
+
+      [
+        ["navFolders", "navFolders"],
+        ["navPresets", "navPresets"],
+        ["navPreview", "navPreview"],
+        ["navConvert", "navConvert"],
+        ["navStart", "navStart"],
+        ["subtitle", "subtitle"],
+        ["privacyText", "privacyText"],
+        ["foldersTitle", "foldersTitle"],
+        ["folderHelp", "folderHelp"],
+        ["renameFolderButton", "rename"],
+        ["presetDenseTitle", "presetDenseTitle"],
+        ["presetDenseDesc", "presetDenseDesc"],
+        ["presetReadableTitle", "presetReadableTitle"],
+        ["presetReadableDesc", "presetReadableDesc"],
+        ["presetPrintTitle", "presetPrintTitle"],
+        ["presetPrintDesc", "presetPrintDesc"],
+        ["presetAnnotationTitle", "presetAnnotationTitle"],
+        ["presetAnnotationDesc", "presetAnnotationDesc"],
+        ["layoutLabel", "layoutLabel"],
+        ["qualityText", "qualityText"],
+        ["advancedSummary", "advancedSummary"],
+        ["marginLabel", "marginLabel"],
+        ["gapLabel", "gapLabel"],
+        ["pageSizeLabel", "pageSizeLabel"],
+        ["orientationLabel", "orientationLabel"],
+        ["pageOrderLabel", "pageOrderLabel"],
+        ["dropTitle", "dropTitle"],
+        ["dropDesc", "dropDesc"],
+        ["chooseButton", "choosePdfs"],
+        ["previewTitle", "previewTitle"],
+        ["previewStatus", "previewAdd"],
+        ["previewFineprint", "previewFineprint"],
+        ["queueTitle", "queueTitle"],
+        ["convertButton", "convertAll"]
+      ].forEach(([id, key]) => setText(id, key));
+
+      const empty = previewCanvasWrap.querySelector(".preview-empty");
+      if (empty && !getVisibleFiles().find((fileItem) => fileItem.file)) {
+        empty.textContent = t("previewEmpty");
+      }
+
+      setOptionText(layoutSelect, "2x2", "layout2x2");
+      setOptionText(layoutSelect, "2x3", "layout2x3");
+      setOptionText(layoutSelect, "3x3", "layout3x3");
+      setOptionText(layoutSelect, "3x4", "layout3x4");
+      setOptionText(layoutSelect, "4x4", "layout4x4");
+      setOptionText(marginSelect, "compact", "small");
+      setOptionText(marginSelect, "balanced", "medium");
+      setOptionText(marginSelect, "roomy", "large");
+      setOptionText(gapSelect, "tight", "tight");
+      setOptionText(gapSelect, "normal", "normal");
+      setOptionText(gapSelect, "airy", "spacious");
+      setOptionText(orientationSelect, "auto", "auto");
+      setOptionText(orientationSelect, "portrait", "portrait");
+      setOptionText(orientationSelect, "landscape", "landscape");
+      setOptionText(pageOrderSelect, "row", "rowOrder");
+      setOptionText(pageOrderSelect, "column", "columnOrder");
+
+      newFolderButton.setAttribute("aria-label", t("createFolderLabel"));
+      document.querySelector(".folder-sidebar")?.setAttribute("aria-label", t("foldersTitle"));
+      document.querySelector(".preset-strip")?.setAttribute("aria-label", t("navPresets"));
+      document.querySelector(".controls")?.setAttribute("aria-label", t("navConvert"));
+      document.querySelector(".preview-panel")?.setAttribute("aria-label", t("previewTitle"));
+      document.querySelector(".queue-section")?.setAttribute("aria-label", t("queueTitle"));
+      languageToggle.textContent = t("languageToggle");
+      languageToggle.setAttribute("aria-label", t("languageToggleLabel"));
+    }
+
+    function loadWorkspaceData() {
+      const fallback = {
+        folders: [{ id: DEFAULT_FOLDER_ID, name: "Inbox", createdAt: new Date().toISOString() }],
+        files: [],
+        activeFolderId: DEFAULT_FOLDER_ID
+      };
+
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return fallback;
+
+        const parsed = JSON.parse(raw);
+        const folders = Array.isArray(parsed.folders) && parsed.folders.length > 0 ? parsed.folders : fallback.folders;
+        const folderIds = new Set(folders.map((folder) => folder.id));
+        const activeFolderId = folderIds.has(parsed.activeFolderId) ? parsed.activeFolderId : folders[0].id;
+        const files = Array.isArray(parsed.files) ? parsed.files
+          .filter((item) => item && folderIds.has(item.folderId))
+          .map((item) => ({
+            ...item,
+            file: null,
+            progress: item.status === "done" ? 100 : 0,
+            message: item.message || t("savedHistoryItem"),
+            note: item.note || "",
+            storedOnly: true
+          })) : [];
+
+        return { folders, files, activeFolderId };
+      } catch (error) {
+        console.warn("Could not load MedGrid workspace", error);
+        return fallback;
+      }
+    }
+
+    function saveWorkspaceData() {
+      const payload = {
+        folders: state.folders,
+        activeFolderId: state.activeFolderId,
+        files: state.files
+          .filter((item) => item.storedOnly || item.status === "done" || item.status === "error")
+          .map((item) => ({
+            id: item.id,
+            name: item.name,
+            size: item.size,
+            folderId: item.folderId,
+            createdAt: item.createdAt,
+            convertedAt: item.convertedAt || "",
+            settingsLabel: item.settingsLabel || "",
+            note: item.note || "",
+            pageCount: item.pageCount || null,
+            status: item.status,
+            progress: item.status === "done" ? 100 : 0,
+            message: item.message || "",
+            error: item.error || ""
+          }))
+      };
+
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (error) {
+        console.warn("Could not save MedGrid workspace", error);
+        showToast(t("storageFull"));
+      }
+    }
+
+    function createFolder() {
+      if (state.isProcessing) return;
+
+      const name = prompt(t("folderPrompt"), "Kurul_5");
+      const cleaned = cleanFolderName(name);
+      if (!cleaned) return;
+
+      const folder = {
+        id: `folder-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name: cleaned,
+        createdAt: new Date().toISOString()
+      };
+
+      state.folders.push(folder);
+      state.activeFolderId = folder.id;
+      saveWorkspaceData();
+      renderFolders();
+      renderFolderTitle();
+      renderQueue();
+      updateGlobalProgress();
+      updateRecommendation();
+      schedulePreview();
+    }
+
+    function renameActiveFolder() {
+      if (state.isProcessing) return;
+
+      const folder = getActiveFolder();
+      if (!folder) return;
+
+      const name = prompt(t("renamePrompt"), displayFolderName(folder));
+      const cleaned = cleanFolderName(name);
+      if (!cleaned) return;
+
+      folder.name = cleaned;
+      saveWorkspaceData();
+      renderFolders();
+      renderFolderTitle();
+    }
+
+    function cleanFolderName(name) {
+      return String(name || "").trim().replace(/\s+/g, "_").slice(0, 48);
+    }
+
+    function getActiveFolder() {
+      return state.folders.find((folder) => folder.id === state.activeFolderId) || state.folders[0];
+    }
+
+    function displayFolderName(folder) {
+      if (!folder) return t("inbox");
+      return folder.id === DEFAULT_FOLDER_ID && folder.name === "Inbox" ? t("inbox") : folder.name;
+    }
+
+    function getVisibleFiles() {
+      return state.files.filter((item) => item.folderId === state.activeFolderId);
+    }
+
+    function setActiveFolder(folderId) {
+      if (state.isProcessing || folderId === state.activeFolderId) return;
+
+      state.activeFolderId = folderId;
+      saveWorkspaceData();
+      renderFolders();
+      renderFolderTitle();
+      renderQueue();
+      updateGlobalProgress();
+      updateRecommendation();
+      schedulePreview();
+    }
+
+    function renderFolders() {
+      folderList.innerHTML = "";
+      state.folders.forEach((folder) => {
+        const button = document.createElement("button");
+        const count = state.files.filter((item) => item.folderId === folder.id).length;
+
+        button.className = `folder-tab${folder.id === state.activeFolderId ? " is-active" : ""}`;
+        button.type = "button";
+        button.disabled = state.isProcessing;
+        button.innerHTML = `<strong></strong><span class="folder-count">${count}</span>`;
+        button.querySelector("strong").textContent = displayFolderName(folder);
+        button.addEventListener("click", () => setActiveFolder(folder.id));
+        folderList.append(button);
+      });
+    }
+
+    function renderFolderTitle() {
+      const folder = getActiveFolder();
+      const files = getVisibleFiles();
+      const doneCount = files.filter((item) => item.status === "done").length;
+      const lastDate = files
+        .map((item) => item.convertedAt || item.createdAt)
+        .filter(Boolean)
+        .sort()
+        .pop();
+
+      activeFolderName.textContent = displayFolderName(folder);
+      activeFolderMeta.textContent = files.length === 0
+        ? t("noPdfsYet")
+        : t("folderMeta", {
+          count: files.length,
+          plural: plural(files.length),
+          done: doneCount,
+          last: lastDate ? t("lastUpdated", { date: formatDateTime(lastDate) }) : ""
+        });
+      return;
+      activeFolderMeta.textContent = `${files.length} PDF${files.length === 1 ? "" : "s"} · ${doneCount} converted${lastDate ? ` · Last updated ${formatDateTime(lastDate)}` : ""}`;
+    }
+
+    function applyPreset(presetName) {
+      const preset = presets[presetName];
+      if (!preset || state.isProcessing) return;
+
+      layoutSelect.value = preset.layout;
+      marginSelect.value = preset.margin;
+      gapSelect.value = preset.gap;
+      pageSizeSelect.value = preset.pageSize;
+      orientationSelect.value = preset.orientation;
+      pageOrderSelect.value = preset.pageOrder;
+      syncPresetState();
+      updateRecommendation();
+      schedulePreview();
+    }
+
+    function syncPresetState() {
+      presetButtons.forEach((button) => {
+        const preset = presets[button.dataset.preset];
+        const isActive = preset &&
+          preset.layout === layoutSelect.value &&
+          preset.margin === marginSelect.value &&
+          preset.gap === gapSelect.value &&
+          preset.pageSize === pageSizeSelect.value &&
+          preset.orientation === orientationSelect.value &&
+          preset.pageOrder === pageOrderSelect.value;
+        button.classList.toggle("is-active", isActive);
+      });
+    }
+
+    function getConversionSettings() {
+      const baseLayout = layouts[layoutSelect.value];
+      const requestedOrientation = orientationSelect.value;
+      const orientation = requestedOrientation === "auto" ? baseLayout.orientation : requestedOrientation;
+      const sheetSize = pageSizes[pageSizeSelect.value][orientation];
+      const margin = marginOptions[marginSelect.value];
+      const gap = gapOptions[gapSelect.value];
+
+      return {
+        ...baseLayout,
+        layoutName: layoutSelect.value,
+        orientation,
+        sheetSize,
+        margin,
+        gap,
+        pageSize: pageSizeSelect.value,
+        pageOrder: pageOrderSelect.value
+      };
+    }
+
+    function getCellMetrics(settings) {
+      return {
+        cellWidth: (settings.sheetSize.width - (settings.margin * 2) - (settings.gap * (settings.cols - 1))) / settings.cols,
+        cellHeight: (settings.sheetSize.height - (settings.margin * 2) - (settings.gap * (settings.rows - 1))) / settings.rows
+      };
+    }
+
+    function setControlsDisabled(disabled) {
+      [layoutSelect, marginSelect, gapSelect, pageSizeSelect, orientationSelect, pageOrderSelect].forEach((control) => {
+        control.disabled = disabled;
+      });
+      presetButtons.forEach((button) => {
+        button.disabled = disabled;
+      });
+    }
+
+    function schedulePreview() {
+      window.clearTimeout(state.previewTimer);
+      state.previewTimer = window.setTimeout(() => {
+        state.previewVersion += 1;
+        renderPreview(state.previewVersion);
+      }, 120);
+    }
+
+    async function renderPreview(version) {
+      const empty = previewCanvasWrap.querySelector(".preview-empty");
+      const item = getVisibleFiles().find((fileItem) => fileItem.file);
+
+      if (!item) {
+        previewCanvas.hidden = true;
+        empty.hidden = false;
+        empty.textContent = t("previewEmpty");
+        previewStatus.textContent = t("previewAdd");
+        return;
+      }
+
+      if (!window.pdfjsLib) {
+        previewCanvas.hidden = true;
+        empty.hidden = false;
+        empty.textContent = t("previewNoPdfJs");
+        previewStatus.textContent = t("previewUnavailable");
+        return;
+      }
+
+      let pdf = null;
+      try {
+        previewCanvas.hidden = true;
+        empty.hidden = false;
+        empty.textContent = t("renderingPreview");
+        previewStatus.textContent = t("previewing", { name: item.name });
+
+        const sourceBuffer = await item.file.arrayBuffer();
+        if (version !== state.previewVersion) return;
+
+        pdf = await window.pdfjsLib.getDocument({ data: sourceBuffer }).promise;
+        if (version !== state.previewVersion) return;
+
+        item.pageCount = pdf.numPages;
+        renderQueue();
+        updateRecommendation();
+
+        await drawPreviewSheet(pdf, getConversionSettings(), version);
+      } catch (error) {
+        console.warn("Preview failed", error);
+        if (version === state.previewVersion) {
+          previewCanvas.hidden = true;
+          empty.hidden = false;
+          empty.textContent = t("previewFailed");
+          previewStatus.textContent = t("previewUnavailable");
+        }
+      } finally {
+        try {
+          if (pdf) {
+            await pdf.destroy();
+          }
+        } catch (error) {
+          console.warn("Preview cleanup failed", error);
+        }
+      }
+    }
+
+    async function drawPreviewSheet(pdf, settings, version) {
+      const empty = previewCanvasWrap.querySelector(".preview-empty");
+      const ctx = previewCanvas.getContext("2d", { alpha: false });
+      const { cellWidth, cellHeight } = getCellMetrics(settings);
+      const maxWidth = settings.orientation === "landscape" ? 700 : 500;
+      const maxHeight = 520;
+      const previewScale = Math.min(maxWidth / settings.sheetSize.width, maxHeight / settings.sheetSize.height);
+      const sheetWidth = Math.round(settings.sheetSize.width * previewScale);
+      const sheetHeight = Math.round(settings.sheetSize.height * previewScale);
+      const previewPages = Math.min(pdf.numPages, settings.rows * settings.cols);
+
+      previewCanvas.width = sheetWidth;
+      previewCanvas.height = sheetHeight;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, sheetWidth, sheetHeight);
+      ctx.strokeStyle = "#dbe3ef";
+      ctx.lineWidth = 1;
+
+      for (let row = 0; row < settings.rows; row += 1) {
+        for (let col = 0; col < settings.cols; col += 1) {
+          ctx.strokeRect(
+            (settings.margin + col * (cellWidth + settings.gap)) * previewScale,
+            (settings.margin + row * (cellHeight + settings.gap)) * previewScale,
+            cellWidth * previewScale,
+            cellHeight * previewScale
+          );
+        }
+      }
+
+      for (let pageNumber = 1; pageNumber <= previewPages; pageNumber += 1) {
+        if (version !== state.previewVersion) return;
+
+        const page = await pdf.getPage(pageNumber);
+        const baseViewport = page.getViewport({ scale: 1 });
+        const renderScale = Math.min(
+          (cellWidth * previewScale * 1.6) / baseViewport.width,
+          (cellHeight * previewScale * 1.6) / baseViewport.height,
+          1.2
+        );
+        const viewport = page.getViewport({ scale: Math.max(renderScale, 0.08) });
+        const pageCanvas = document.createElement("canvas");
+        const pageCtx = pageCanvas.getContext("2d", { alpha: false });
+
+        pageCanvas.width = Math.max(1, Math.ceil(viewport.width));
+        pageCanvas.height = Math.max(1, Math.ceil(viewport.height));
+        pageCtx.fillStyle = "#ffffff";
+        pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
+        await page.render({
+          canvasContext: pageCtx,
+          viewport,
+          background: "white"
+        }).promise;
+
+        const { row, col } = getGridPosition(settings, pageNumber);
+        const cellX = (settings.margin + col * (cellWidth + settings.gap)) * previewScale;
+        const cellY = (settings.margin + row * (cellHeight + settings.gap)) * previewScale;
+        const maxDrawWidth = cellWidth * previewScale;
+        const maxDrawHeight = cellHeight * previewScale;
+        const drawScale = Math.min(maxDrawWidth / pageCanvas.width, maxDrawHeight / pageCanvas.height);
+        const drawWidth = pageCanvas.width * drawScale;
+        const drawHeight = pageCanvas.height * drawScale;
+
+        ctx.drawImage(
+          pageCanvas,
+          cellX + (maxDrawWidth - drawWidth) / 2,
+          cellY + (maxDrawHeight - drawHeight) / 2,
+          drawWidth,
+          drawHeight
+        );
+
+        page.cleanup();
+        pageCanvas.width = 0;
+        pageCanvas.height = 0;
+      }
+
+      if (version !== state.previewVersion) return;
+      empty.hidden = true;
+      previewCanvas.hidden = false;
+      previewStatus.textContent = t("firstSheetPreview", {
+        shown: previewPages,
+        total: pdf.numPages,
+        plural: plural(pdf.numPages)
+      });
+    }
+
+    async function convertAll() {
+      const pendingFiles = getVisibleFiles().filter((item) => item.file && (item.status === "queued" || item.status === "error"));
+      if (pendingFiles.length === 0 || state.isProcessing) return;
+
+      state.isProcessing = true;
+      setControlsDisabled(true);
+      convertButton.disabled = true;
+      showToast(t("conversionStarted"));
+
+      const settings = getConversionSettings();
+      const settingsLabel = summarizeSettings(settings);
+      for (const item of pendingFiles) {
+        if (!state.files.includes(item)) continue;
+        state.activeFileId = item.id;
+        await processFile(item, settings, settingsLabel);
+      }
+
+      state.activeFileId = null;
+      state.isProcessing = false;
+      setControlsDisabled(false);
+      renderQueue();
+      updateGlobalProgress();
+      showToast(t("allProcessed"));
+    }
+
+    async function processFile(item, settings, settingsLabel) {
+      let sourceBytes = null;
+      let sourceDoc = null;
+
+      try {
+        setItemState(item, {
+          status: "processing",
+          progress: 0,
+          message: t("loadingPdf"),
+          settingsLabel,
+          error: ""
+        });
+
+        sourceBytes = new Uint8Array(await item.file.arrayBuffer());
+        sourceDoc = await PDFDocument.load(sourceBytes, {
+          ignoreEncryption: true,
+          updateMetadata: false
+        });
+        const sourcePages = sourceDoc.getPages();
+        item.pageCount = sourcePages.length;
+
+        const outputDoc = await PDFDocument.create();
+        const sheetSize = settings.sheetSize;
+        const sheetCapacity = settings.rows * settings.cols;
+        const { cellWidth, cellHeight } = getCellMetrics(settings);
+
+        let outputPage = null;
+
+        for (let startPage = 1; startPage <= item.pageCount; startPage += BATCH_SIZE) {
+          const endPage = Math.min(startPage + BATCH_SIZE - 1, item.pageCount);
+          const embeddedPages = await outputDoc.embedPages(sourcePages.slice(startPage - 1, endPage));
+
+          for (let offset = 0; offset < embeddedPages.length; offset += 1) {
+            const pageNumber = startPage + offset;
+            if ((pageNumber - 1) % sheetCapacity === 0) {
+              outputPage = outputDoc.addPage([sheetSize.width, sheetSize.height]);
+            }
+
+            item.progress = Math.round(((pageNumber - 1) / item.pageCount) * 100);
+            item.message = t("embeddingPage", { page: pageNumber, total: item.pageCount });
+            renderQueue();
+            updateGlobalProgress();
+
+            drawPageInCell(outputPage, embeddedPages[offset], settings, sheetSize, cellWidth, cellHeight, pageNumber);
+          }
+
+          await pause(35);
+        }
+
+        item.progress = 98;
+        item.message = t("finalizingPdf");
+        renderQueue();
+        updateGlobalProgress();
+
+        const outputBytes = await outputDoc.save({ useObjectStreams: true });
+        downloadPdf(outputBytes, item.name);
+
+        setItemState(item, {
+          status: "done",
+          progress: 100,
+          message: t("doneDownloaded", { name: item.name }),
+          convertedAt: new Date().toISOString(),
+          settingsLabel,
+          error: ""
+        });
+        saveWorkspaceData();
+        renderFolders();
+        renderFolderTitle();
+      } catch (error) {
+        console.error(error);
+        setItemState(item, {
+          status: "error",
+          progress: 0,
+          message: t("couldNotConvert"),
+          convertedAt: new Date().toISOString(),
+          settingsLabel,
+          error: friendlyError(error)
+        });
+        saveWorkspaceData();
+        renderFolders();
+        renderFolderTitle();
+      } finally {
+        sourceDoc = null;
+        sourceBytes = null;
+        await pause(60);
+      }
+    }
+
+    function drawPageInCell(outputPage, embeddedPage, settings, sheetSize, cellWidth, cellHeight, pageNumber) {
+      const placement = getCellPlacement(embeddedPage, settings, sheetSize, cellWidth, cellHeight, pageNumber);
+
+      outputPage.drawPage(embeddedPage, placement);
+    }
+
+    function getCellPlacement(drawable, settings, sheetSize, cellWidth, cellHeight, pageNumber) {
+      const { row, col } = getGridPosition(settings, pageNumber);
+      const cellX = settings.margin + col * (cellWidth + settings.gap);
+      const cellTop = sheetSize.height - settings.margin - row * (cellHeight + settings.gap);
+      const fitted = getFittedSize(drawable.width, drawable.height, cellWidth, cellHeight);
+
+      return {
+        x: cellX + (cellWidth - fitted.width) / 2,
+        y: cellTop - cellHeight + (cellHeight - fitted.height) / 2,
+        width: fitted.width,
+        height: fitted.height
+      };
+    }
+
+    function getFittedSize(sourceWidth, sourceHeight, maxWidth, maxHeight) {
+      const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+
+      return {
+        width: sourceWidth * scale,
+        height: sourceHeight * scale
+      };
+    }
+
+    function getGridPosition(settings, pageNumber) {
+      const indexOnSheet = (pageNumber - 1) % (settings.rows * settings.cols);
+
+      if (settings.pageOrder === "column") {
+        return {
+          row: indexOnSheet % settings.rows,
+          col: Math.floor(indexOnSheet / settings.rows)
+        };
+      }
+
+      return {
+        row: Math.floor(indexOnSheet / settings.cols),
+        col: indexOnSheet % settings.cols
+      };
+    }
+
+    function downloadPdf(bytes, filename) {
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function setItemState(item, patch) {
+      Object.assign(item, patch);
+      renderQueue();
+      updateGlobalProgress();
+      renderFolderTitle();
+    }
+
+    function renderQueue() {
+      const visibleFiles = getVisibleFiles();
+      const hasPendingUpload = visibleFiles.some((item) => item.file && (item.status === "queued" || item.status === "error"));
+      convertButton.disabled = state.isProcessing || !hasPendingUpload;
+
+      if (visibleFiles.length === 0) {
+        queueEl.innerHTML = `<div class="empty-state">${t("emptyFolder")}</div>`;
+        return;
+      }
+
+      queueEl.innerHTML = "";
+      visibleFiles.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "file-row";
+
+        const main = document.createElement("div");
+        main.className = "file-main";
+
+        const name = document.createElement("div");
+        name.className = "file-name";
+        name.textContent = item.name;
+
+        const meta = document.createElement("div");
+        meta.className = "file-meta";
+        meta.append(metaPart(`${formatBytes(item.size)}`));
+        meta.append(metaPart(item.pageCount ? t("pagesCount", { count: item.pageCount, plural: plural(item.pageCount) }) : t("pageCountLoads")));
+        meta.append(metaPart(`${t("added")} ${formatDateTime(item.createdAt)}`));
+        if (item.convertedAt) {
+          meta.append(metaPart(`${t("converted")} ${formatDateTime(item.convertedAt)}`));
+        }
+        if (item.settingsLabel) {
+          meta.append(metaPart(item.settingsLabel, "history-chip"));
+        }
+        if (item.storedOnly && !item.file) {
+          meta.append(metaPart(t("historyOnly"), "history-chip"));
+        }
+        meta.append(metaPart(getItemMessage(item)));
+
+        if (item.error) {
+          const error = document.createElement("span");
+          error.className = "error-text";
+          error.textContent = item.error;
+          meta.append(error);
+        }
+
+        const progress = document.createElement("div");
+        progress.className = "file-progress bar";
+        progress.setAttribute("aria-hidden", "true");
+        const progressFill = document.createElement("span");
+        progressFill.style.width = `${item.progress}%`;
+        progress.append(progressFill);
+
+        const noteWrap = document.createElement("label");
+        noteWrap.className = "note-wrap";
+        const noteLabel = document.createElement("span");
+        noteLabel.className = "note-label";
+        noteLabel.textContent = t("note");
+        const noteInput = document.createElement("textarea");
+        noteInput.className = "note-input";
+        noteInput.placeholder = t("notePlaceholder");
+        noteInput.value = item.note || "";
+        noteInput.addEventListener("input", () => {
+          item.note = noteInput.value;
+          saveWorkspaceData();
+        });
+        noteWrap.append(noteLabel, noteInput);
+
+        main.append(name, meta, progress, noteWrap);
+
+        const status = document.createElement("span");
+        status.className = `status ${item.status}`;
+        status.textContent = t(`status${item.status.charAt(0).toUpperCase()}${item.status.slice(1)}`);
+
+        const remove = document.createElement("button");
+        remove.className = "remove";
+        remove.type = "button";
+        remove.title = t("removeFile", { name: item.name });
+        remove.setAttribute("aria-label", t("removeFile", { name: item.name }));
+        remove.innerHTML = "&times;";
+        remove.disabled = state.isProcessing && item.status === "processing";
+        remove.addEventListener("click", () => {
+          state.files = state.files.filter((fileItem) => fileItem.id !== item.id);
+          saveWorkspaceData();
+          renderFolders();
+          renderFolderTitle();
+          renderQueue();
+          updateGlobalProgress();
+          updateRecommendation();
+          schedulePreview();
+        });
+
+        row.append(main, status, remove);
+        queueEl.append(row);
+      });
+    }
+
+    function metaPart(text, className = "") {
+      const span = document.createElement("span");
+      if (className) {
+        span.className = className;
+      }
+      span.textContent = text;
+      return span;
+    }
+
+    function getItemMessage(item) {
+      if (item.status === "queued") return t("waitingToConvert");
+      if (item.status === "done") return t("doneDownloaded", { name: item.name });
+      if (item.status === "error") return t("couldNotConvert");
+      return item.message || t("waitingToConvert");
+    }
+
+    function updateRecommendation() {
+      const settings = getConversionSettings();
+      const firstFile = getVisibleFiles()[0];
+      const pageCount = firstFile && firstFile.pageCount;
+      const pagesPerSheet = settings.rows * settings.cols;
+      let message = "";
+
+      if (!firstFile) {
+        message = t("recommendationEmpty");
+      } else if (settings.layoutName === "4x4") {
+        message = t("recommendation4x4");
+      } else if (settings.layoutName === "3x3") {
+        message = t("recommendation3x3");
+      } else if (settings.layoutName === "2x3") {
+        message = t("recommendation2x3");
+      } else {
+        message = t("recommendation2x2");
+      }
+
+      if (pageCount) {
+        const outputSheets = Math.ceil(pageCount / pagesPerSheet);
+        message += t("recommendationSheets", {
+          pages: pageCount,
+          sheets: outputSheets,
+          plural: plural(outputSheets)
+        });
+      }
+
+      if (settings.pageOrder === "column") {
+        message += t("recommendationColumn");
+      }
+
+      recommendation.textContent = message;
+    }
+
+    function updateGlobalProgress() {
+      const visibleFiles = getVisibleFiles();
+      const total = visibleFiles.length;
+      if (total === 0) {
+        globalLabel.textContent = t("ready");
+        globalPercent.textContent = "0%";
+        globalBar.style.width = "0%";
+        return;
+      }
+
+      const done = visibleFiles.filter((item) => item.status === "done" || item.status === "error").length;
+      const active = visibleFiles.find((item) => item.id === state.activeFileId);
+      const activeFraction = active && active.status === "processing" ? active.progress / 100 : 0;
+      const percent = Math.round(((done + activeFraction) / total) * 100);
+
+      globalLabel.textContent = state.isProcessing
+        ? t("processingXofY", { current: Math.min(done + 1, total), total })
+        : `${done} / ${total} ${t("complete")}`;
+      globalPercent.textContent = `${percent}%`;
+      globalBar.style.width = `${percent}%`;
+    }
+
+    function summarizeSettings(settings) {
+      const pageSize = settings.pageSize === "a4" ? "A4" : "Letter";
+      return t("settingsSummary", {
+        layout: settings.layoutName,
+        size: pageSize,
+        orientation: t(settings.orientation),
+        order: settings.pageOrder === "column" ? t("orderColumn") : t("orderRow")
+      });
+    }
+
+    function formatDateTime(value) {
+      if (!value) return "unknown";
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "unknown";
+
+      return date.toLocaleString(currentLanguage === "tr" ? "tr-TR" : undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes) || bytes === 0) return "0 KB";
+      const units = ["B", "KB", "MB", "GB"];
+      const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+      const value = bytes / Math.pow(1024, exponent);
+      return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+    }
+
+    function friendlyError(error) {
+      const message = String(error && (error.message || error.name || error));
+      const lower = message.toLowerCase();
+
+      if (lower.includes("password")) {
+        return t("errPassword");
+      }
+
+      if (lower.includes("encrypted")) {
+        return t("errEncrypted");
+      }
+
+      if (lower.includes("memory") || lower.includes("allocation") || error instanceof RangeError) {
+        return t("errMemory");
+      }
+
+      if (lower.includes("invalid") || lower.includes("corrupt") || lower.includes("pdf")) {
+        return t("errInvalid");
+      }
+
+      return t("errGeneric", { message });
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+    }
+
+    function pause(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    applyTranslations();
+    syncPresetState();
+    updateRecommendation();
+    renderFolders();
+    renderFolderTitle();
+    renderQueue();
+    updateGlobalProgress();
+  </script>
+</body>
+</html>
