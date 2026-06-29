@@ -365,7 +365,7 @@
 
     .advanced-grid {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 12px;
       padding: 0 14px 14px;
     }
@@ -749,6 +749,43 @@
       margin-top: 12px;
       color: var(--muted);
       font-size: 0.92rem;
+    }
+
+    .signature-sticker {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 172px;
+      padding: 10px 14px;
+      border: 3px solid var(--ink);
+      border-radius: 18px;
+      color: var(--ink);
+      background: var(--yellow);
+      box-shadow: var(--soft-shadow);
+      text-decoration: none;
+      transform: rotate(-3deg);
+      transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .signature-sticker:hover {
+      box-shadow: 6px 6px 0 var(--ink);
+      transform: rotate(1deg) translateY(-2px);
+    }
+
+    .signature-sticker strong {
+      font-size: 0.95rem;
+      line-height: 1;
+    }
+
+    .signature-sticker span {
+      color: var(--muted);
+      font-family: "Trebuchet MS", ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.72rem;
+      font-weight: 800;
     }
 
     /* Playful editorial skin inspired by pastel neo-brutalist product sites. */
@@ -1452,6 +1489,13 @@
         grid-column: 1 / 2;
         width: max-content;
       }
+
+      .signature-sticker {
+        right: 12px;
+        bottom: 12px;
+        min-width: 146px;
+        padding: 8px 10px;
+      }
     }
   </style>
 </head>
@@ -1586,6 +1630,13 @@
             <option value="column">Yukarıdan aşağı</option>
           </select>
         </div>
+        <div class="field">
+          <label id="outputTargetLabel" for="outputTargetSelect">Çıktı hedefi</label>
+          <select id="outputTargetSelect">
+            <option value="downloads" selected>İndirilenler</option>
+            <option value="folder">Klasör seç (Chrome/Edge)</option>
+          </select>
+        </div>
       </div>
     </details>
 
@@ -1634,6 +1685,11 @@
       </div>
     </div>
   </main>
+
+  <a class="signature-sticker" href="https://github.com/YSFBatuhan" target="_blank" rel="noopener noreferrer" aria-label="YSFBatuhan GitHub profili">
+    <strong>@YSFBatuhan</strong>
+    <span>made with too many PDFs</span>
+  </a>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script type="module">
@@ -1737,6 +1793,9 @@
         pageOrderLabel: "Sayfa sırası",
         rowOrder: "Soldan sağa",
         columnOrder: "Yukarıdan aşağı",
+        outputTargetLabel: "Çıktı hedefi",
+        outputDownloads: "İndirilenler",
+        outputFolder: "Klasör seç (Chrome/Edge)",
         dropTitle: "PDF dosyalarını buraya bırak",
         dropDesc: "Bir veya daha fazla PDF yükle. MedGrid dosyaları tek tek işler ve sonucu orijinal dosya adıyla indirir.",
         choosePdfs: "PDF seç",
@@ -1767,12 +1826,18 @@
         previewing: "{name} önizleniyor",
         previewFailed: "Bu PDF için önizleme oluşturulamadı.",
         firstSheetPreview: "İlk yaprak önizlemesi: {shown} / {total} sayfa.",
-        conversionStarted: "Dönüştürme başladı. Her dosya bitince otomatik indirilecek.",
+        conversionStarted: "Dönüştürme başladı. Her dosya bitince seçili hedefe kaydedilecek.",
         allProcessed: "Kuyruktaki tüm dosyalar işlendi.",
         loadingPdf: "PDF yükleniyor...",
         embeddingPage: "Orijinal sayfa gömülüyor {page} / {total}; görüntüye çevrilmiyor...",
         finalizingPdf: "PDF sonlandırılıyor...",
         doneDownloaded: "Tamamlandı. {name} olarak indirildi.",
+        doneSavedToFolder: "Tamamlandı. Seçilen klasöre kaydedildi: {name}.",
+        folderPickerUnsupported: "Bu tarayıcı klasöre direkt kaydetmeyi desteklemiyor. Normal indirme kullanılacak.",
+        folderPickerCancelled: "Klasör seçilmedi. Normal indirme kullanılacak.",
+        folderSaveFailed: "Seçilen klasöre yazılamadı. Normal indirme kullanılacak.",
+        signatureLabel: "YSFBatuhan GitHub profili",
+        signatureSubtext: "made with too many PDFs",
         couldNotConvert: "Bu PDF dönüştürülemedi.",
         statusQueued: "Sırada",
         statusProcessing: "İşleniyor",
@@ -1851,6 +1916,9 @@
         pageOrderLabel: "Page order",
         rowOrder: "Left to right",
         columnOrder: "Top to bottom",
+        outputTargetLabel: "Output target",
+        outputDownloads: "Downloads",
+        outputFolder: "Choose folder (Chrome/Edge)",
         dropTitle: "Drop PDF files here",
         dropDesc: "Upload one or more PDFs. MedGrid processes them one at a time and downloads each result with the original filename.",
         choosePdfs: "Choose PDFs",
@@ -1881,12 +1949,18 @@
         previewing: "Previewing {name}",
         previewFailed: "Preview could not be rendered for this PDF.",
         firstSheetPreview: "First sheet preview: {shown} of {total} page{plural}.",
-        conversionStarted: "Conversion started. Downloads will begin automatically as each file finishes.",
+        conversionStarted: "Conversion started. Each file will be saved to the selected target.",
         allProcessed: "All queued files have been processed.",
         loadingPdf: "Loading PDF...",
         embeddingPage: "Embedding original page {page} / {total} without rasterizing...",
         finalizingPdf: "Finalizing PDF...",
         doneDownloaded: "Done. Downloaded as {name}.",
+        doneSavedToFolder: "Done. Saved to the selected folder: {name}.",
+        folderPickerUnsupported: "This browser cannot save directly to a folder. Normal downloads will be used.",
+        folderPickerCancelled: "No folder was selected. Normal downloads will be used.",
+        folderSaveFailed: "MedGrid could not write to the selected folder. Normal downloads will be used.",
+        signatureLabel: "YSFBatuhan GitHub profile",
+        signatureSubtext: "made with too many PDFs",
         couldNotConvert: "Could not convert this PDF.",
         statusQueued: "Queued",
         statusProcessing: "Processing",
@@ -1940,6 +2014,7 @@
     const pageSizeSelect = $("#pageSizeSelect");
     const orientationSelect = $("#orientationSelect");
     const pageOrderSelect = $("#pageOrderSelect");
+    const outputTargetSelect = $("#outputTargetSelect");
     const presetButtons = Array.from(document.querySelectorAll(".preset"));
     const queueEl = $("#queue");
     const toast = $("#toast");
@@ -1989,7 +2064,7 @@
     newFolderButton.addEventListener("click", createFolder);
     renameFolderButton.addEventListener("click", renameActiveFolder);
     languageToggle.addEventListener("click", toggleLanguage);
-    [layoutSelect, marginSelect, gapSelect, pageSizeSelect, orientationSelect, pageOrderSelect].forEach((control) => {
+    [layoutSelect, marginSelect, gapSelect, pageSizeSelect, orientationSelect, pageOrderSelect, outputTargetSelect].forEach((control) => {
       control.addEventListener("change", () => {
         syncPresetState();
         updateRecommendation();
@@ -2018,6 +2093,7 @@
           pageCount: null,
           status: "queued",
           progress: 0,
+          saveMethod: "download",
           message: t("waitingToConvert"),
           error: ""
         });
@@ -2125,6 +2201,7 @@
         ["pageSizeLabel", "pageSizeLabel"],
         ["orientationLabel", "orientationLabel"],
         ["pageOrderLabel", "pageOrderLabel"],
+        ["outputTargetLabel", "outputTargetLabel"],
         ["dropTitle", "dropTitle"],
         ["dropDesc", "dropDesc"],
         ["chooseButton", "choosePdfs"],
@@ -2156,6 +2233,8 @@
       setOptionText(orientationSelect, "landscape", "landscape");
       setOptionText(pageOrderSelect, "row", "rowOrder");
       setOptionText(pageOrderSelect, "column", "columnOrder");
+      setOptionText(outputTargetSelect, "downloads", "outputDownloads");
+      setOptionText(outputTargetSelect, "folder", "outputFolder");
 
       newFolderButton.setAttribute("aria-label", t("createFolderLabel"));
       document.querySelector(".folder-sidebar")?.setAttribute("aria-label", t("foldersTitle"));
@@ -2165,6 +2244,12 @@
       document.querySelector(".queue-section")?.setAttribute("aria-label", t("queueTitle"));
       languageToggle.textContent = t("languageToggle");
       languageToggle.setAttribute("aria-label", t("languageToggleLabel"));
+      const signature = document.querySelector(".signature-sticker");
+      signature?.setAttribute("aria-label", t("signatureLabel"));
+      const signatureSubtext = signature?.querySelector("span");
+      if (signatureSubtext) {
+        signatureSubtext.textContent = t("signatureSubtext");
+      }
     }
 
     function loadWorkspaceData() {
@@ -2190,6 +2275,7 @@
             progress: item.status === "done" ? 100 : 0,
             message: item.message || t("savedHistoryItem"),
             note: item.note || "",
+            saveMethod: item.saveMethod || "download",
             storedOnly: true
           })) : [];
 
@@ -2218,6 +2304,7 @@
             pageCount: item.pageCount || null,
             status: item.status,
             progress: item.status === "done" ? 100 : 0,
+            saveMethod: item.saveMethod || "download",
             message: item.message || "",
             error: item.error || ""
           }))
@@ -2337,7 +2424,6 @@
           last: lastDate ? t("lastUpdated", { date: formatDateTime(lastDate) }) : ""
         });
       return;
-      activeFolderMeta.textContent = `${files.length} PDF${files.length === 1 ? "" : "s"} · ${doneCount} converted${lastDate ? ` · Last updated ${formatDateTime(lastDate)}` : ""}`;
     }
 
     function applyPreset(presetName) {
@@ -2385,7 +2471,8 @@
         margin,
         gap,
         pageSize: pageSizeSelect.value,
-        pageOrder: pageOrderSelect.value
+        pageOrder: pageOrderSelect.value,
+        outputTarget: outputTargetSelect.value
       };
     }
 
@@ -2397,7 +2484,7 @@
     }
 
     function setControlsDisabled(disabled) {
-      [layoutSelect, marginSelect, gapSelect, pageSizeSelect, orientationSelect, pageOrderSelect].forEach((control) => {
+      [layoutSelect, marginSelect, gapSelect, pageSizeSelect, orientationSelect, pageOrderSelect, outputTargetSelect].forEach((control) => {
         control.disabled = disabled;
       });
       presetButtons.forEach((button) => {
@@ -2563,14 +2650,17 @@
       state.isProcessing = true;
       setControlsDisabled(true);
       convertButton.disabled = true;
-      showToast(t("conversionStarted"));
 
       const settings = getConversionSettings();
+      const destinationHandle = await getOutputDirectoryHandle(settings);
       const settingsLabel = summarizeSettings(settings);
+      if (settings.outputTarget === "downloads" || destinationHandle) {
+        showToast(t("conversionStarted"));
+      }
       for (const item of pendingFiles) {
         if (!state.files.includes(item)) continue;
         state.activeFileId = item.id;
-        await processFile(item, settings, settingsLabel);
+        await processFile(item, settings, settingsLabel, destinationHandle);
       }
 
       state.activeFileId = null;
@@ -2581,7 +2671,24 @@
       showToast(t("allProcessed"));
     }
 
-    async function processFile(item, settings, settingsLabel) {
+    async function getOutputDirectoryHandle(settings) {
+      if (settings.outputTarget !== "folder") return null;
+
+      if (!("showDirectoryPicker" in window)) {
+        showToast(t("folderPickerUnsupported"));
+        return null;
+      }
+
+      try {
+        return await window.showDirectoryPicker({ mode: "readwrite" });
+      } catch (error) {
+        console.warn("Folder picker was not completed", error);
+        showToast(t("folderPickerCancelled"));
+        return null;
+      }
+    }
+
+    async function processFile(item, settings, settingsLabel, destinationHandle) {
       let sourceBytes = null;
       let sourceDoc = null;
 
@@ -2636,14 +2743,15 @@
         updateGlobalProgress();
 
         const outputBytes = await outputDoc.save({ useObjectStreams: true });
-        downloadPdf(outputBytes, item.name);
+        const saveMethod = await saveOutputPdf(outputBytes, item.name, destinationHandle);
 
         setItemState(item, {
           status: "done",
           progress: 100,
-          message: t("doneDownloaded", { name: item.name }),
+          message: t(saveMethod === "folder" ? "doneSavedToFolder" : "doneDownloaded", { name: item.name }),
           convertedAt: new Date().toISOString(),
           settingsLabel,
+          saveMethod,
           error: ""
         });
         saveWorkspaceData();
@@ -2712,6 +2820,27 @@
         row: Math.floor(indexOnSheet / settings.cols),
         col: indexOnSheet % settings.cols
       };
+    }
+
+    async function saveOutputPdf(bytes, filename, directoryHandle) {
+      if (!directoryHandle) {
+        downloadPdf(bytes, filename);
+        return "download";
+      }
+
+      try {
+        const blob = new Blob([bytes], { type: "application/pdf" });
+        const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return "folder";
+      } catch (error) {
+        console.warn("Could not save to selected folder", error);
+        showToast(t("folderSaveFailed"));
+        downloadPdf(bytes, filename);
+        return "download";
+      }
     }
 
     function downloadPdf(bytes, filename) {
@@ -2840,7 +2969,10 @@
 
     function getItemMessage(item) {
       if (item.status === "queued") return t("waitingToConvert");
-      if (item.status === "done") return t("doneDownloaded", { name: item.name });
+      if (item.status === "done") {
+        const key = item.saveMethod === "folder" ? "doneSavedToFolder" : "doneDownloaded";
+        return t(key, { name: item.name });
+      }
       if (item.status === "error") return t("couldNotConvert");
       return item.message || t("waitingToConvert");
     }
